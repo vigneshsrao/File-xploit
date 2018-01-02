@@ -6,19 +6,17 @@ This python module is for generating payloads to exploit the FILE structure in C
 <b>Usage</b>
 -----
 
-FileStructure(arch, null) - returns an object that can stimulate the FILE structure in C
-                            arch - specify the architecture. It can be -
+FileStructure(arch, null) - returns an object that can stimulate the FILE structure in C<br \>
+                            * arch - specify the architecture. It can be -
                               * 64 - amd64
                               * 32 - i386
-                            null - an address pointing to null value
+                            * null - an address pointing to null value
 
-write(addr,size) - function in FileStructure. Returns payload for writing data from
-                   arbitrary address to stdout. Arguments are -
+write(addr,size) - function in FileStructure. Returns payload for writing data from arbitrary address to stdout. Arguments are-<br \> 
                        * addr - the address from where the data is to be written out
                        * size - the size of data to be written
 
-read(addr,size) - function in FileStructure. Returns payload for reading data to
-                   arbitrary address from stdin. Arguments are -
+read(addr,size) - function in FileStructure. Returns payload for reading data to arbitrary address from stdin. Arguments are -<br \>
                        * The address where the data is to be read
                        * The size of data to be read
 
