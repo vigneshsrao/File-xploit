@@ -17,14 +17,16 @@ FileStructure(arch, null) - returns an object that can stimulate the FILE struct
                              </ul>
 
 write(addr,size) - function in FileStructure. Returns payload for writing data from arbitrary address to stdout. Arguments are-<br /> 
-                  
-                          * addr - the address from where the data is to be written out
-                          * size - the size of data to be written
+                        <ul>  
+                          <li> addr - the address from where the data is to be written out
+                          <li> size - the size of data to be written
+                         </ul>
 
 read(addr,size) - function in FileStructure. Returns payload for reading data to arbitrary address from stdin. Arguments are -<br />
-
-                        * The address where the data is to be read
-                        * The size of data to be read
+                       <ul> 
+                        <li> addr - the address where the data is to be read
+                        <li> size - she size of data to be read
+                       </ul>
 
 <b>Examples</b>
 --------
