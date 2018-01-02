@@ -6,7 +6,7 @@ This python module is for generating payloads to exploit the FILE structure in C
 <b>Usage</b>
 -----
 
-FileStructure(arch, null) - returns an object that can stimulate the FILE structure in C<br />
+FileStructure(arch, null) - returns an object that can stimulate the FILE structure in C
                               * arch - specify the architecture. It can be -
                                 * 64 - amd64
                                 * 32 - i386
