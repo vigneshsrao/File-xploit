@@ -9,9 +9,9 @@ variables={
     3:{name:'_IO_read_base',size:length},
     4:{name:'_IO_write_base',size:length},
     5:{name:'_IO_write_ptr',size:length},
+    6:{name:'_IO_write_end',size:length},
     7:{name:'_IO_buf_base',size:length},
     8:{name:'_IO_buf_end',size:length},
-    6:{name:'_IO_write_end',size:length},
     9:{name:'_IO_save_base',size:length},
     10:{name:'_IO_backup_base',size:length},
     11:{name:'_IO_save_end',size:length},
@@ -57,10 +57,10 @@ def update_var(l):
         var['unknown2']=48
     return var
 
-def pack(s,l=8):
+def packit(s,l=8):
     if l==0:
         return ''
-    return hex(s).replace('0x','').rjust(2*l,'0').decode('hex')[::-1].ljust(l,'\x00')
+    return  hex(s).replace('0x','').rjust(2*l,'0').replace('L','').decode('hex')[::-1].ljust(l,'\x00')
 
 class FileStructure(dict):
     vars_=[]
@@ -113,7 +113,7 @@ class FileStructure(dict):
                 else:
                     structure+=self[val].ljust(8,'\x00')
             else:
-                structure+=pack(self[val],self.length[val])
+                structure+=packit(self[val],self.length[val])
         return structure
 
     def sort_str(self):
@@ -124,42 +124,42 @@ class FileStructure(dict):
     def set_vars(self,item,value):
         self[item]=value
 
-    def write(self,addr,size):
+    def struntil(self,v):
+        if v not in self.vars_:
+            return ''
+        structure=''
+        for val in self.vars_:
+            if type(self[val]) is str:
+                if self.arch==32:
+                    structure+=self[val].ljust(4,'\x00')
+                else:
+                    structure+=self[val].ljust(8,'\x00')
+            else:
+                structure+=packit(self[val],self.length[val])
+            if val==v:
+                break;
+        return structure[:len(structure)-1]
+
+    def write(self,addr=0,size=0):
         self['flags'] &=~8
         self['flags'] |=0x800
         self['_IO_write_base'] = addr
         self['_IO_write_ptr'] = addr+size
         self['_IO_read_end'] = addr
         self['fileno'] = 1
-        structure=''
-        for val in self.vars_:
-            if val=='_flags2':
-                break;
-            if type(self[val]) is str:
-                if self.arch==32:
-                    structure+=self[val].ljust(4,'\x00')
-                else:
-                    structure+=self[val].ljust(8,'\x00')
-            else:
-                structure+=pack(self[val],self.length[val])
-        return structure
+        return self.struntil('fileno')
 
-    def read(self,addr,size):
+    def read(self,addr=0,size=0):
         self['flags'] &=~4
         self['_IO_read_base'] = 0
         self['_IO_read_ptr'] = 0
         self['_IO_buf_base'] = addr
         self['_IO_buf_end'] = addr+size
         self['fileno'] = 0
-        structure=''
-        for val in self.vars_:
-            if val=='_flags2':
-                break;
-            if type(self[val]) is str:
-                if self.arch==32:
-                    structure+=self[val].ljust(4,'\x00')
-                else:
-                    structure+=self[val].ljust(8,'\x00')
-            else:
-                structure+=pack(self[val],self.length[val])
-        return structure
+        return self.struntil('fileno')
+
+if __name__=='__main__':
+    from IPython import embed
+
+    q=FileStructure(null=0x10203040)
+    embed()
