@@ -16,8 +16,8 @@ int main()
   free(ptr);
 
   fp=fopen("inp","rw");
-  read(0,ptr,0x1000);
-  fscanf(fp,"%s",buf); 
+  read(0,ptr,0x78);
+  fscanf(fp,"%s",buf);
 
   puts(flag); // This is just to show the current value in 'flag'
 }

