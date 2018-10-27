@@ -1,15 +1,25 @@
+# -*- coding: utf-8 -*-
+
+r"""
+File Structure Exploitation
+
+struct FILE (_IO_FILE) is the structure of File Streams. This offers various targets for exploitation on an existing bug in the code. Examples - _IO_buf_base and _IO_buf_end for reading data to arbitrary location.
+
+Remembering the offsets of various structure members while faking a FILE structure can be difficult, so this python class helps you with that. Example-
+
+>>> context.clear(arch='amd64')
+>>> fileStr = FileStructure(null=0xdeadbeef)
+>>> fileStr.vtable = 0xcafebabe
+>>> payload = str(fileStr)
+
+Now payload contains the FILE structure with its vtable pointer pointing to 0xcafebabe
+"""
+
 from __future__ import absolute_import
 from __future__ import division
 
-from collections import namedtuple
-
-from pwnlib.abi import ABI
-from pwnlib.context import LocalContext
 from pwnlib.context import context
 from pwnlib.log import getLogger
-from pwnlib.util.packing import flat
-from pwnlib.util.packing import pack
-from pwnlib.util.packing import unpack_many
 
 log = getLogger(__name__)
 
@@ -78,6 +88,52 @@ def packit(s,l=8):
     return hex(s).replace('0x','').rjust(2*l,'0').replace('L','').decode('hex')[::-1].ljust(l,'\x00')
 
 class FileStructure(dict):
+    r"""
+    Crafts a FILE structure, with default values for some fields, like _lock which should point to null ideally, set.
+
+    Arguments:
+        null(int)
+            A pointer to NULL value in memory. This pointer can lie in any segment (stack, heap, bss, libc etc)
+
+    Examples:
+
+        FILE structure with flags as 0xfbad1807 and _IO_buf_base and _IO_buf_end pointing to 0xcafebabe and 0xfacef00d
+
+        >>> context.clear(arch='amd64')
+        >>> fileStr = FileStructure(null=0xdeadbeeef)
+        >>> fileStr.flags = 0xfbad1807
+        >>> fileStr._IO_buf_base = 0xcafebabe
+        >>> fileStr._IO_buf_end = 0xfacef00d
+        >>> payload = str(fileStr)
+
+        check the length of the FileStructure
+
+        >>> len(fileStr)
+        224
+
+        payload for stuff till 'v' where 'v' is a structure. This payload includes 'v' as well. Example payload for data uptil _IO_buf_end
+
+        >>> payload = fileStr.struntil("_IO_buf_end")
+
+        Reading data into arbitrary memory location. Example for reading 100 bytes from stdin into the address 0xcafebabe
+
+        >>> context.clear(arch='amd64')
+        >>> fileStr = FileStructure(0xdeadbeef)
+        >>> payload = fileStr.read(addr=0xcafebabe, size=100)
+
+        Writing data out from arbitrary memory address. Example for writing 100 bytes to stdout from the address 0xcafebabe
+
+        >>> context.clear(arch='amd64')
+        >>> fileStr = FileStructure(0xdeadbeef)
+        >>> payload = fileStr.write(addr=0xcafebabe, size=100)
+
+        Perform a House of Orange, provided you have libc leaks. For example if address of _IO_list_all is 0xfacef00d and fake vtable is at 0xcafebabe -
+
+        >>> context.clear(arch='amd64')
+        >>> fileStr = FileStructure(0xdeadbeef)
+        >>> payload = fileStr.orange(io_list_all=0xfacef00d, vtable=0xcafebabe)
+    """
+
     vars_=[]
     length={}
     arch='amd64'
@@ -109,9 +165,13 @@ class FileStructure(dict):
             log.error("Unknown variable %r" % item)
         return super(FileStructure,self).__setitem__(item,value)
 
+    '''
+    This defination for __repr__ to order the structure members. Useful when viewing a structure objet in python/IPython shell
+    '''
+
     def __repr__(self):
         d=self.sort_str()
-        return "{"+ "\n".join((" %r:%s"%(k,v)) for k,v in d)+"}"
+        return "{"+ "\n".join((" %r: %s" % (k,hex(v))) for k,v in d)+"}"
 
     def __len__(self):
         return len(str(self))
@@ -149,7 +209,7 @@ class FileStructure(dict):
             else:
                 structure+=packit(self[val],self.length[val])
             if val==v:
-                break;
+                break
         return structure[:len(structure)-1]
 
     def write(self,addr=0,size=0):
@@ -186,7 +246,9 @@ class FileStructure(dict):
 
 
 if __name__=='__main__':
+    from doctest import testmod
     from IPython import embed
     context.arch='amd64'
-    q=FileStructure(null=0x10203040)
+    q = FileStructure(null=0xdeadbeef)
+    testmod()
     embed()
